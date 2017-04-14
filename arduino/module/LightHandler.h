@@ -9,13 +9,15 @@ class LightHandler
 {
 public:
   // ----- Constructor -----
-  LightHandler(int deviceId, int pin);
+  LightHandler(int deviceId);
 
+  void init(int pin);
   int getDeviceId();
   bool isOn();
   void toggle();
   void on();
   void off();
+  void loop();
 
 private:
   int _pin;        // hardware pin number. 

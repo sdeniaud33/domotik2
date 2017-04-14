@@ -19,12 +19,10 @@ RS485Connector::RS485Connector(int moduleId, int rxPin, int txPin, int enPin):
 
 void RS485Connector::init(int serialSpeed) {
   pinMode(_enPin, OUTPUT);
-  _softwareSerial->begin(57600);   // set the data rate
-  digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
+  _softwareSerial->begin(serialSpeed);   // set the data rate
+//  digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
   _myChannel.begin();
-  this->enableTransmit();
   this->sendMessage(0, "ready");
-  this->enableReceive();
 }
 
 void RS485Connector::enableTransmit() {
@@ -40,7 +38,7 @@ void RS485Connector::sendMsg (const byte * data, const byte length) {
 }
 
 int RS485Connector::sendMessage(int deviceId, const char msg[]) {
-
+  this->enableTransmit();
   ModuleMessage message;
 
   memset (&message, 0, sizeof message);
@@ -61,6 +59,7 @@ int RS485Connector::sendMessage(int deviceId, const char msg[]) {
       delay(SEND_REPEAT_INTERVAL);
     this->sendMsg((byte *) &message, sizeof message);
   }
+  this->enableReceive();
 }
 
 void RS485Connector::loop() {

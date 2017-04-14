@@ -14,7 +14,9 @@ class ButtonHandler
 {
 public:
   // ----- Constructor -----
-  ButtonHandler(int buttonId, int pin);
+  ButtonHandler(int buttonId);
+
+  void init(int pin);
   
   // ----- Set runtime parameters -----
 
@@ -35,7 +37,7 @@ public:
   // ----- State machine functions -----
 
   // call this function every some milliseconds for handling button events.
-  void tick(void);
+  void loop(void);
   bool isLongPressed();
   int getPin();
   int getButtonId();

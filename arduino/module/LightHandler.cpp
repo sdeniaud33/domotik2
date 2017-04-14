@@ -2,12 +2,16 @@
 
 // ----- Initialization and Default Values -----
 
-LightHandler::LightHandler(int deviceId, int pin)
+LightHandler::LightHandler(int deviceId)
+{
+  _deviceId = deviceId;
+} // LightHandler
+
+void LightHandler::init(int pin)
 {
   pinMode(pin, OUTPUT);
   _pin = pin;
-  _deviceId = deviceId;
-} // LightHandler
+}
 
 
 int LightHandler::getDeviceId() {
@@ -29,12 +33,15 @@ void LightHandler::off() {
 }
 
 void LightHandler::toggle() {
+  Serial.println("Toggle");
   if (_isOn)
     off();
   else
     on();
 }
 
+void LightHandler::loop() {
+}
 
 // end.
 

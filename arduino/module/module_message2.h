@@ -13,7 +13,7 @@ typedef struct
   char text[20];
 }  ModuleMessage;
 
-#define SEND_REPEAT_COUNT 10
+#define SEND_REPEAT_COUNT 5
 #define SEND_REPEAT_INTERVAL 50
 
 class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {

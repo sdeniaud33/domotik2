@@ -2,18 +2,26 @@
 
 // ----- Initialization and Default Values -----
 
-ButtonHandler::ButtonHandler(int buttonId, int pin)
+ButtonHandler::ButtonHandler(int buttonId)
 {
-  int activeLow = true;
-  pinMode(pin, INPUT);      // sets the MenuPin as input
-  _pin = pin;
   _buttonId = buttonId;
-
-  _clickTicks = 600;        // number of millisec that have to pass by before a click is detected.
-  _pressTicks = 1000;       // number of millisec that have to pass by before a long button press is detected.
+  _clickTicks = 300;        // number of millisec that have to pass by before a click is detected.
+  _pressTicks = 3000;       // number of millisec that have to pass by before a long button press is detected.
  
   _state = 0; // starting with state 0: waiting for button to be pressed
   _isLongPressed = false;  // Keep track of long press state
+
+  _doubleClickFunc = NULL;
+  _pressFunc = NULL;
+  _longPressStartFunc = NULL;
+  _longPressStopFunc = NULL;
+  _duringLongPressFunc = NULL;
+} // ButtonHandler
+
+void ButtonHandler::init(int pin) { 
+  int activeLow = true;
+  pinMode(pin, INPUT);      // sets the MenuPin as input
+  _pin = pin;
 
   if (activeLow) {
     // button connects ground to the pin when pressed.
@@ -26,15 +34,7 @@ ButtonHandler::ButtonHandler(int buttonId, int pin)
     _buttonReleased = LOW;
     _buttonPressed = HIGH;
   } // if
-
-
-  _doubleClickFunc = NULL;
-  _pressFunc = NULL;
-  _longPressStartFunc = NULL;
-  _longPressStopFunc = NULL;
-  _duringLongPressFunc = NULL;
-} // ButtonHandler
-
+}
 
 // explicitly set the number of millisec that have to pass by before a click is detected.
 void ButtonHandler::setClickTicks(int ticks) { 
@@ -92,7 +92,7 @@ bool ButtonHandler::isLongPressed(){
   return _isLongPressed;
 }
 
-void ButtonHandler::tick(void)
+void ButtonHandler::loop(void)
 {
   // Detect the input information 
   int buttonLevel = digitalRead(_pin); // current button signal.

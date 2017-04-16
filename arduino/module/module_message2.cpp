@@ -15,12 +15,14 @@ RS485Connector::RS485Connector(int moduleId, int rxPin, int txPin, int enPin):
   _softwareSerial(new SoftwareSerial(rxPin, txPin)),
   _myChannel(this, this, this, 50)
 {
+  for (int i = 0; i < MAX_MODULE_COUNT; i++)
+    lastProcessedCounterByModule[i] = -1;
 }
 
 void RS485Connector::init(int serialSpeed) {
   pinMode(_enPin, OUTPUT);
   _softwareSerial->begin(serialSpeed);   // set the data rate
-//  digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
+  digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
   _myChannel.begin();
   this->sendMessage(0, "ready");
 }
@@ -47,13 +49,15 @@ int RS485Connector::sendMessage(int deviceId, const char msg[]) {
   message.deviceId = deviceId;
   memcpy(message.text, msg, strlen(msg));
   message.crc = this->ComputeMessageCrc2(&message, sizeof message);
-  Serial.print("Sent ");
-  Serial.print(message.text);
-  Serial.print("/");
-  Serial.print(message.deviceId);
-  Serial.print(" (");
-  Serial.print(message.counter);
-  Serial.println(")");
+  /*
+    Serial.print("Sent ");
+    Serial.print(message.text);
+    Serial.print("/");
+    Serial.print(message.deviceId);
+    Serial.print(" (");
+    Serial.print(message.counter);
+    Serial.println(")");
+  */
   for (int i = 0; i < SEND_REPEAT_COUNT; i++) {
     if (i > 0)
       delay(SEND_REPEAT_INTERVAL);
@@ -80,6 +84,16 @@ void RS485Connector::loop() {
             Serial.print(" from device #");
             Serial.print(message.moduleId);
       */
+      if (lastProcessedCounterByModule[message.moduleId] == message.counter) {
+        // This message has already been processed
+        return;
+      }
+
+      Serial.print("Message #");
+      Serial.print(message.counter);
+      Serial.print(" received from module #");
+      Serial.println(message.moduleId);
+      lastProcessedCounterByModule[message.moduleId] = message.counter;
       _messageCallback(message);
     }
   }

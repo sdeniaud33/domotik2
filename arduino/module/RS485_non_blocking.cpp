@@ -108,22 +108,19 @@ byte RS485::crc8 (const byte *addr, byte len)
 void RS485::sendComplemented (const byte what)
 {
 byte c;
-
   // first nibble
   c = what >> 4;
   writeByteInstance->writeByte((c << 4) | (c ^ 0x0F));
-
   // second nibble
   c = what & 0x0F;
   writeByteInstance->writeByte((c << 4) | (c ^ 0x0F));
-
 }  // end of RS485::sendComplemented
 
 // send a message of "length" bytes (max 255) to other end
 // put STX at start, ETX at end, and add CRC
 void RS485::sendMsg (const byte * data, const byte length)
 {
-  // no callback? Can't send
+ // no callback? Can't send
   if (writeByteInstance == NULL)
     return;
 

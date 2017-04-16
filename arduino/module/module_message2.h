@@ -13,8 +13,9 @@ typedef struct
   char text[20];
 }  ModuleMessage;
 
-#define SEND_REPEAT_COUNT 5
-#define SEND_REPEAT_INTERVAL 50
+#define SEND_REPEAT_COUNT 3
+#define SEND_REPEAT_INTERVAL 20
+#define MAX_MODULE_COUNT 20
 
 class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
     typedef void (*MessageCallback)  (const ModuleMessage message);
@@ -27,6 +28,7 @@ class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
     const RS485 _myChannel;
     int _globalCounter = 0;
     MessageCallback _messageCallback;
+    int lastProcessedCounterByModule[MAX_MODULE_COUNT];
 
 
 #define RS485Transmit    HIGH

@@ -1,3 +1,6 @@
+#ifndef btnToLight_h
+#define btnToLight_h
+
 byte btnToLight[] =
 {
   /*   0 */   0,
@@ -259,4 +262,4 @@ byte btnToLight[] =
 };
 
 
-
+#endif

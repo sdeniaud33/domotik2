@@ -3,6 +3,7 @@
 
 #include "Arduino.h"
 #include <OneWire.h>
+#include "RS485Connector.h"
 
 #define PIN_ONE_WIRE 2
 
@@ -12,33 +13,40 @@ class TempSensor
 
   public:
 
-    TempSensor(int sensorId, TemperatureAvailableCallback cb) :
-      _ds(PIN_ONE_WIRE),
-      _tempCb(cb)
+    TempSensor(RS485Connector connector, int sensorId) :
+      _connector(connector),
+      _ds(PIN_ONE_WIRE)
     {
+      Serial.print(F("Declare temperature sensor #"));
+      Serial.print(sensorId);
       _sensorId = sensorId;
-      if (_selectFirstAddr()) {
+      _temperatureSensorExists = _selectFirstAddr();
+      if (_temperatureSensorExists) {
         _requestTemperatureReading();
+        Serial.println(F(" : OK, found"));
       }
       else {
-        Serial.println("No temperature sensor");
+        Serial.println(F(" : Error : no temperature sensor could be found"));
       }
     }
 
     void loop() {
+      if (!_temperatureSensorExists)
+        return;
       long delta = millis() - _lastRequestTime;
       if (_waitForNextPeriod) {
         if (delta > _readPeriodInMs) {
           _requestTemperatureReading();
           _waitForNextPeriod = false;
-        }      
+        }
       }
       else {
         if (delta > 1000) {
+          // The DS18B20 needs 750ms to read the temperature. Leave it 1000ms to make sure it's OK.
           _readTemperature();
           // Do nothing until the next period
           _waitForNextPeriod = true;
-        }        
+        }
       }
     }
 
@@ -55,8 +63,8 @@ class TempSensor
     long _readPeriodInMs = 60000; // 300000;
     unsigned long _lastRequestTime = 0;
     bool _waitForNextPeriod = false;
-    TemperatureAvailableCallback _tempCb;
-
+    bool _temperatureSensorExists = false;
+    RS485Connector _connector;
     float _temperature;
     OneWire  _ds;
     byte _addr[8];
@@ -74,9 +82,7 @@ class TempSensor
       byte cfg = (data[4] & 0x60);
 
       float celsius = (float)raw / 16.0;
-      if (_tempCb != NULL) {
-        _tempCb(_sensorId, celsius);
-      }
+      _sendTemperatureSensorValue(celsius);
     }
 
     void _requestTemperatureReading() {
@@ -84,6 +90,7 @@ class TempSensor
       _ds.select(_addr);
       _ds.write(0x44);        // start conversion, use ds.write(0x44,1) with parasite power on at the end
       _lastRequestTime = millis();
+      // From now, we have to wait at least for 750ms before reading the temperature
     }
 
     bool _selectFirstAddr() {
@@ -101,12 +108,20 @@ class TempSensor
         Serial.println();
       */
       if (OneWire::crc8(_addr, 7) != _addr[7]) {
-        Serial.println("CRC is not valid!");
+        Serial.println(F("CRC is not valid!"));
         return false;
       }
 
       return true;
     }
+
+    int _sendTemperatureSensorValue(float temperatureInCelsius) {
+      union MessagePayload payload;
+      payload.temperatureInCelsius = temperatureInCelsius;
+      return _connector.sendMessage(_sensorId, DeviceClass_TemperatureSensor, payload);
+    }
+
+
 
 };
 

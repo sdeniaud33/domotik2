@@ -2,6 +2,14 @@
 #define ButtonHandler_h
 
 #include "Arduino.h"
+#include "RS485Connector.h"
+#include "buttonsToLights.h"
+#include "LightHandler.h"
+
+enum ButtonMessage {
+  ButtonMessage_SingleClick,
+  ButtonMessage_LongPress
+};
 
 // ----- Callback function types -----
 
@@ -9,14 +17,21 @@ extern "C" {
   typedef void (*callbackFunction)(int);
 }
 
-
 class ButtonHandler
 {
   public:
     // ----- Constructor -----
-    ButtonHandler(int buttonId, int pin) {
-      _buttonId = buttonId;
-      _clickTicks = 300;        // number of millisec that have to pass by before a click is detected.
+    ButtonHandler(RS485Connector connector, int buttonId, int pin) :
+      _connector(connector),
+      _pin(pin),
+      _buttonId(buttonId)
+    {
+      Serial.print(F("Declare button #"));
+      Serial.print(buttonId);
+      Serial.print(F(" on pin #"));
+      Serial.println(pin);
+      
+      _clickTicks = 0;        // number of millisec that have to pass by before a click is detected. Double click is disabled by default
       _pressTicks = 3000;       // number of millisec that have to pass by before a long button press is detected.
 
       _state = 0; // starting with state 0: waiting for button to be pressed
@@ -24,16 +39,15 @@ class ButtonHandler
 
       _doubleClickFunc = NULL;
       _pressFunc = NULL;
-      _longPressStartFunc = NULL;
       _longPressStopFunc = NULL;
       _duringLongPressFunc = NULL;
 
       pinMode(pin, INPUT);      // sets the MenuPin as input
-      _pin = pin;
 
       _buttonReleased = HIGH; // notPressed
       _buttonPressed = LOW;
       digitalWrite(pin, HIGH);   // turn on pullUp resistor
+
     }
 
     // ----- Set runtime parameters -----
@@ -47,20 +61,16 @@ class ButtonHandler
     // set # millisec after press is assumed.
     void setPressTicks(int ticks) {
       _pressTicks = ticks;
-
     }
 
-    // attach functions that will be called when button was pressed in the specified way.
-    void attachClick(callbackFunction newFunction) {
-      _clickFunc = newFunction;
+    void setLight(LightHandler* light) {
+      _light = light;
     }
+
     void attachDoubleClick(callbackFunction newFunction) {
       _doubleClickFunc = newFunction;
     }
-    void attachLongPressStart(callbackFunction newFunction) {
-      _longPressStartFunc = newFunction;
 
-    }
     void attachLongPressStop(callbackFunction newFunction) {
       _longPressStopFunc = newFunction;
     }
@@ -96,7 +106,7 @@ class ButtonHandler
         } else if ((buttonLevel == _buttonPressed) && ((unsigned long)(now - _startTime) > _pressTicks)) {
           _isLongPressed = true;  // Keep track of long press state
           if (_pressFunc) _pressFunc(_buttonId);
-          if (_longPressStartFunc) _longPressStartFunc(_buttonId);
+          _longPressStart(_buttonId);
           if (_duringLongPressFunc) _duringLongPressFunc(_buttonId);
           _state = 6; // step to state 6
 
@@ -107,7 +117,7 @@ class ButtonHandler
       } else if (_state == 2) { // waiting for menu pin being pressed the second time or timeout.
         if ((unsigned long)(now - _startTime) > _clickTicks) {
           // this was only a single short click
-          if (_clickFunc) _clickFunc(_buttonId);
+          _singleClick(_buttonId);
           _state = 0; // restart.
 
         } else if (buttonLevel == _buttonPressed) {
@@ -151,6 +161,8 @@ class ButtonHandler
     int _clickTicks; // number of ticks that have to pass by before a click is detected
     int _pressTicks; // number of ticks that have to pass by before a long button press is detected
     const int _debounceTicks = 50; // number of ticks for debounce times.
+    RS485Connector _connector;
+    LightHandler* _light = NULL;
 
     int _buttonReleased;
     int _buttonPressed;
@@ -158,10 +170,8 @@ class ButtonHandler
     bool _isLongPressed;
 
     // These variables will hold functions acting as event source.
-    callbackFunction _clickFunc;
     callbackFunction _doubleClickFunc;
     callbackFunction _pressFunc;
-    callbackFunction _longPressStartFunc;
     callbackFunction _longPressStopFunc;
     callbackFunction _duringLongPressFunc;
 
@@ -169,6 +179,35 @@ class ButtonHandler
     // They are initialized once on program start and are updated every time the tick function is called.
     int _state;
     unsigned long _startTime; // will be set in state 1
+
+    int _sendMessage(ButtonMessage buttonMessage) {
+      union MessagePayload payload;
+      payload.buttonMessage = buttonMessage;
+      return _connector.sendMessage(_buttonId, DeviceClass_Button, payload);
+    }
+
+
+    // A button has been long pressed
+    void _longPressStart(int buttonId) {
+      _sendMessage(ButtonMessage_LongPress);
+    }
+
+
+    // A button has been single clicked
+    void _singleClick(int buttonId) {
+      Serial.print(F("Button clicked "));
+      Serial.println(_buttonId);
+      if (_light != NULL) {
+        // The light bount to this button is connected to the current board  : toggle it
+        _light->toggle();
+      }
+      else {
+        // The light bount to this button (if any, it might be a button for the shutters, for instance) is not on this board,
+        // just broadcast the 'single click' message to the other boards. Maybe one will be insterested ...
+        _sendMessage(ButtonMessage_SingleClick);
+      }
+    }
+
 };
 
 #endif

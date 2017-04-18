@@ -5,11 +5,25 @@
 #include "Arduino.h"
 
 
+#define RS485_SERIAL_SPEED 19200
+
+enum SystemMessage {
+  SystemMessage_Started,
+  SystemMessage_Heartbeat
+};
+
 enum DeviceClass {
-  System,
-  Button,
-  Light,
-  TemperatureSensor
+  DeviceClass_System,
+  DeviceClass_Button,
+  DeviceClass_Light,
+  DeviceClass_TemperatureSensor
+};
+
+union MessagePayload {
+  float temperatureInCelsius;
+  int buttonMessage;
+  int lightMessage;
+  int systemMessage;
 };
 
 typedef struct
@@ -19,12 +33,12 @@ typedef struct
   int moduleId;
   int deviceId;
   DeviceClass deviceClass;
-  char text[20];
+  MessagePayload payload;
 }  ModuleMessage;
 
-#define SEND_REPEAT_COUNT 3
-#define SEND_REPEAT_INTERVAL 20
-#define MAX_MODULE_COUNT 20
+#define SEND_REPEAT_COUNT 10
+#define SEND_REPEAT_INTERVAL 10
+#define MAX_MODULE_COUNT 18
 
 class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
     typedef void (*MessageCallback)  (const ModuleMessage message);
@@ -45,11 +59,11 @@ class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
 
   private:
     // send data
-    void sendMsg (const byte * data, const byte length) {
+    void _sendMsg(const byte * data, const byte length) {
       _lowLevelConnector.sendMsg(data, length);
     }
 
-    unsigned long ComputeMessageCrc2(void *message, int len)
+    unsigned long _computeMessageCrc(void *message, int len)
     {
       unsigned char * data;
       unsigned long chk = 0;
@@ -75,6 +89,12 @@ class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
       return _softwareSerial->available();
     }
 
+    void _enableTransmit() {
+      digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
+    }
+    void _enableReceive() {
+      digitalWrite(_enPin, RS485Receive);  // Enable RS485 Receive
+    }
 
   public:
     RS485Connector::RS485Connector(int moduleId) : RS485Connector(moduleId, A1, A3, A2) {}
@@ -85,31 +105,24 @@ class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
       _txPin(txPin),
       _enPin(enPin),
       _softwareSerial(new SoftwareSerial(rxPin, txPin)),
-      _lowLevelConnector(this, this, this, 50)
+      _lowLevelConnector(this, this, this, 20)
     {
       for (int i = 0; i < MAX_MODULE_COUNT; i++)
         lastProcessedCounterByModule[i] = -1;
     }
 
-    void init(MessageCallback messageCallback, int serialSpeed = 19200) {
+    void init(MessageCallback messageCallback, long serialSpeed = RS485_SERIAL_SPEED) {
       _messageCallback = messageCallback;
       pinMode(_enPin, OUTPUT);
       _softwareSerial->begin(serialSpeed);   // set the data rate
-      digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
+      this->_enableTransmit();
       _lowLevelConnector.begin();
-      this->sendMessage(0, System, "ready");
-      this->enableReceive();
+      this->_enableReceive();
     }
 
-    void enableTransmit() {
-      digitalWrite(_enPin, RS485Transmit);  // Enable RS485 Transmit
-    }
-    void enableReceive() {
-      digitalWrite(_enPin, RS485Receive);  // Enable RS485 Receive
-    }
-
-    int sendMessage(int deviceId, DeviceClass deviceClass, const char msg[]) {
-      this->enableTransmit();
+    int sendMessage(int deviceId, DeviceClass deviceClass, MessagePayload payload) {
+      unsigned long d0 = millis();
+      this->_enableTransmit();
       ModuleMessage message;
 
       memset (&message, 0, sizeof message);
@@ -117,56 +130,65 @@ class RS485Connector : IReadByte, IWriteByte, IBytesAvailable {
       message.deviceClass = deviceClass;
       message.counter = this->_globalCounter++;
       message.deviceId = deviceId;
-      memcpy(message.text, msg, strlen(msg));
-      message.crc = this->ComputeMessageCrc2(&message, sizeof message);
-      /*
-        Serial.print("Sent ");
-        Serial.print(message.text);
-        Serial.print("/");
-        Serial.print(message.deviceId);
-        Serial.print(" (");
-        Serial.print(message.counter);
-        Serial.println(")");
-      */
+      message.payload = payload;
+      message.crc = this->_computeMessageCrc(&message, sizeof message);
+      // Send the message more than once to make sure it will be delivered
+      // Note : there is no collision management
       for (int i = 0; i < SEND_REPEAT_COUNT; i++) {
-        if (i > 0)
-          delay(SEND_REPEAT_INTERVAL);
-        this->sendMsg((byte *) &message, sizeof message);
+        if (i > 0) {
+          // Use a random delay to maximize collision avoidance
+          delay(random(SEND_REPEAT_INTERVAL - 5, SEND_REPEAT_INTERVAL + 5));
+        }
+        this->_sendMsg((byte *) &message, sizeof message);
       }
-      this->enableReceive();
+      this->_enableReceive();
+      unsigned long d1 =  millis() - d0;
+      Serial.print(F("Sent duration : "));
+      Serial.print(d1);
+      Serial.println(F(" ms"));
+    }
+
+    int sendSystemMessage(SystemMessage systemMessage) {
+      union MessagePayload payload;
+      payload.systemMessage = systemMessage;
+      return sendMessage(0, DeviceClass_System, payload);
     }
 
     void loop() {
-      if (_lowLevelConnector.update()) {
-        if (_messageCallback != NULL) {
-          ModuleMessage message;
-          memset (&message, 0, sizeof message);
-          memcpy(&message, _lowLevelConnector.getData(), _lowLevelConnector.getLength());
-
-          int expectedCrc = this->ComputeMessageCrc2(&message, sizeof message);
-          if (expectedCrc != message.crc) {
-            Serial.println("Message received with invalid CRC");
-            return;
-          }
-          /*
-                Serial.print("Received message #");
-                Serial.print(message.counter);
-                Serial.print(" from device #");
-                Serial.print(message.moduleId);
-          */
-          if (lastProcessedCounterByModule[message.moduleId] == message.counter) {
-            // This message has already been processed
-            return;
-          }
-
-          Serial.print("Message #");
-          Serial.print(message.counter);
-          Serial.print(" received from module #");
-          Serial.println(message.moduleId);
-          lastProcessedCounterByModule[message.moduleId] = message.counter;
-          _messageCallback(message);
-        }
+      if (!_lowLevelConnector.update()) {
+        // No RS485 message is available
+        return;
       }
+      if (_messageCallback == NULL) {
+        // There is no callback, no need to process the message
+        return;
+      }
+      // Let's decode the message
+      ModuleMessage message;
+      // Build a message from the RS-485 data
+      memset (&message, 0, sizeof message);
+      memcpy(&message, _lowLevelConnector.getData(), _lowLevelConnector.getLength());
+
+      // Check its CRC
+      int expectedCrc = this->_computeMessageCrc(&message, sizeof message);
+      if (expectedCrc != message.crc) {
+        Serial.println(F("Message received with invalid CRC"));
+        return;
+      }
+      // RS-485 are sent more than once to make sure they will be transmitted (avoid collision management)
+      // Let's check if this message has not benn already processed
+      if (lastProcessedCounterByModule[message.moduleId] == message.counter) {
+        // This message has already been processed
+        return;
+      }
+
+      Serial.print(F("Message #"));
+      Serial.print(message.counter);
+      Serial.print(F(" received from module #"));
+      Serial.println(message.moduleId);
+      lastProcessedCounterByModule[message.moduleId] = message.counter;
+      // Invoke the callback
+      _messageCallback(message);
     }
 
 };

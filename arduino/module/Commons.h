@@ -1,7 +1,7 @@
 #ifndef btnToLight_h
 #define btnToLight_h
 
-#define DEBUGMSG false
+#define DEBUGMSG true
 
 byte btnToLight[] =
     {

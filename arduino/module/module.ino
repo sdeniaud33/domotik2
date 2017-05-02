@@ -5,7 +5,7 @@
 #include "Commons.h"
 
 /*-----( Declare Constants and Pin Numbers )-----*/
-#define MODULE_ID 1
+#define MODULE_ID 0
 
 #if MODULE_ID == 0
 static const byte buttonDeviceIds[] = {1, 2, 3};

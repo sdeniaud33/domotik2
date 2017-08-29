@@ -1,0 +1,27 @@
+div.device_temp_sensor {
+	display:inline-block;
+	background: url(/images/device_temp_sensor_32.png);
+	width: 32px;
+	height: 32px;
+}
+div.device_switch {
+	display:inline-block;
+	background: url(/images/switch_32.png);
+	width: 32px;
+	height: 32px;
+	cursor: pointer;
+}
+div.device_light_on {
+	display:inline-block;
+	background: url(/images/light_on_32.png);
+	width: 32px;
+	height: 32px;
+	cursor: pointer;
+}
+div.device_light_off {
+	display:inline-block;
+	background: url(/images/light_off_32.png);
+	width: 32px;
+	height: 32px;
+	cursor: pointer;
+}

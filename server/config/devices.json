@@ -1,0 +1,160 @@
+{
+	"rooms": [
+		{
+			"id": "ethan",
+			"label": "Chambre Ethan"
+		},
+		{
+			"id": "nolan",
+			"label": "Chambre Nolan"
+		},
+		{
+			"id": "entree",
+			"label": "Entrée"
+		},
+		{
+			"id": "parents",
+			"label": "Chambre parents"
+		}
+	],
+	"devices": [
+		{
+			"type": "light",
+			"id": "lightEthan001",
+			"label":"Lumiere Ethan",
+			"roomId":"ethan"
+		},
+		{
+			"type": "switch",
+			"id": "switchEthan001",
+			"label": "Inter. Ethan - 1",
+			"roomId": "ethan",
+			"singleClickActions": [
+				{
+					"id": "lightEthan001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "switch",
+			"id": "switchEthan002",
+			"label": "Inter. Ethan - 2",
+			"roomId": "ethan",
+			"singleClickActions": [
+				{
+					"id": "lightEthan001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "switch",
+			"id": "switchEthan003",
+			"label": "Inter. Ethan - 3",
+			"roomId": "ethan",
+			"singleClickActions": [
+				{
+					"id": "lightEthan001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "light",
+			"id": "lightNolan001",
+			"label": "Lumiere Nolan",
+			"roomId": "nolan"
+		},
+		{
+			"type": "switch",
+			"id": "switchNolan001",
+			"label": "Inter. Nolan - 1",
+			"roomId": "nolan",
+			"singleClickActions": [
+				{
+					"id": "lightNolan001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "switch",
+			"id": "switchNolan002",
+			"label": "Inter. Nolan - 2",
+			"roomId": "nolan",
+			"singleClickActions": [
+				{
+					"id": "lightNolan001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "light",
+			"id": "lightParents001",
+			"label": "Lumiere Parents",
+			"roomId": "parents"
+		},
+		{
+			"type": "switch",
+			"id": "switchParents001",
+			"label": "Inter. Parents - 1",
+			"roomId": "parents",
+			"singleClickActions": [
+				{
+					"id": "lightParents001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "switch",
+			"id": "switchParents002",
+			"label": "Inter. Parents - 2",
+			"roomId": "parents",
+			"singleClickActions": [
+				{
+					"id": "lightParents001",
+					"action": "switch"
+				}
+			]
+		},
+		{
+			"type": "switch",
+			"id": "switchEntree001",
+			"label":"General - off (double-click)",
+			"roomId": "entree",
+			"doubleClickActions": [
+				{
+					"type": "light",
+					"action":"off"
+				}
+			]
+		},
+		{
+			"type": "tempSensor",
+			"id": "tempEthan",
+			"label": "Thermomètre",
+			"roomId": "ethan"
+		},
+		{
+			"type": "tempSensor",
+			"id": "tempNolan",
+			"label": "Thermomètre",
+			"roomId": "nolan"
+		},
+		{
+			"type": "tempSensor",
+			"id": "tempEntree",
+			"label": "Thermomètre",
+			"roomId": "entree"
+		},
+		{
+			"type": "tempSensor",
+			"id": "tempParents",
+			"label": "Thermomètre",
+			"roomId": "parents"
+		}
+	]
+}

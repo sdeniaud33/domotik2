@@ -1,0 +1,50 @@
+<script>
+	var devices = {{{ devices }}};
+	var rooms = {{{ rooms }}};
+
+</script>
+
+<link rel="stylesheet" href="/css/home.css">
+<script type="text/javascript" src="/js/home.app.js"></script>
+<script type="text/javascript" src="/js/home.ctrl.js"></script>
+
+<script type="text/ng-template" id="/deviceLight.html">
+	<div ng-class="device.status == 'on' ? 'device_light_on' : 'device_light_off'" ng-click="lightSwitch(device.id)" title="{[{device.id}]}">
+	</div>
+	<span>{[{device.label}]}</span>
+</script>
+
+<script type="text/ng-template" id="/deviceSwitch.html">
+	<div class="device_switch" title="{[{device.id}]}" ng-click="switchSingleClick(device.id);" ng-dblclick="switchDoubleClick(device.id);">
+	</div>
+	<span>{[{device.label}]}</span>
+</script>
+
+<script type="text/ng-template" id="/deviceTempSensor.html">
+	<div class="device_temp_sensor" title="{[{device.id}]}">
+	</div>
+	<span>{[{device.label}]} : {[{device.temperature}]} °C</span>
+</script>
+
+<div class="row">
+	<div ng-repeat="room in rooms track by $index">
+		<div class="col-sm-4 col-md-3 col-xs-6">
+			<div class="thumbnail">
+				<div>
+					<h4>{[{room.label}]}</h4>
+					<div ng-repeat="device in devices track by $index">
+						<div ng-show="device.room.id == room.id && device.type=='light'">
+							<span ng-include src="'/deviceLight.html'"></span>
+						</div>
+						<div ng-show="device.room.id == room.id && device.type=='switch'">
+							<span ng-include src="'/deviceSwitch.html'"></span>
+						</div>
+						<div ng-show="device.room.id == room.id && device.type=='tempSensor'">
+							<span ng-include src="'/deviceTempSensor.html'"></span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

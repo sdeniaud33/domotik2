@@ -1,4 +1,4 @@
-class Room {
+class DeviceLocation {
 	id: string;
 	label: string;
 
@@ -12,4 +12,4 @@ class Room {
 
 }
 
-export { Room };
+export { DeviceLocation };

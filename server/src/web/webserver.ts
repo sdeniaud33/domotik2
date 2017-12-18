@@ -1,6 +1,5 @@
 import * as http from 'http';
 import * as dbgModule from 'debug';
-import { Controller } from '../core/controller';
 const debug = dbgModule('domotik:webserver');
 
 import App from './App';
@@ -8,10 +7,8 @@ import App from './App';
 class WebServer {
 	server: any;
 	port: number | string | boolean;
-	controller: Controller;
 
-	constructor(controller: Controller) {
-		this.controller = controller;
+	constructor() {
 
 		this.server = http.createServer(App);
 

@@ -1,6 +1,6 @@
 app.controller('myCtrl', function ($scope, $timeout) {
 	$scope.devices = devices;
-	$scope.rooms = rooms;
+	$scope.locations = locations;
 
 	setInterval(() => {
 		$scope.loadDevices();
@@ -31,7 +31,8 @@ app.controller('myCtrl', function ($scope, $timeout) {
 			method: 'GET',
 			url: '/devices',
 			callback: function (err, data) {
-				$scope.updateDevices(data);
+				if (data)
+					$scope.updateDevices(data);
 			}
 		})
 	}
@@ -41,49 +42,29 @@ app.controller('myCtrl', function ($scope, $timeout) {
 			return;
 		$scope.$apply(function () {
 			data.devices.forEach((device) => {
-				if (device.type === 'light') {
+				if (device.category === 'light') {
 					$scope.devices[device.id].status = device.status;
 				}
-				else if (device.type === 'tempSensor') {
+				else if (device.category === 'tempSensor') {
 					$scope.devices[device.id].temperature = device.temperature;
+				}
+				else if (device.category === 'shutter') {
+					$scope.devices[device.id].position = device.position;
+					$scope.devices[device.id].positionBy10 = device.positionBy10;
 				}
 			});
 		});
 	}
 
-	$scope.lightSwitch = function (lightId) {
+	$scope.emitCommand = function (deviceId, command) {
 		$scope.launchAjaxRequest({
 			method: 'POST',
-			url: '/device/light/' + lightId + '/switch',
+			url: '/device/command/' + deviceId + '/' + command,
 			callback: function (err, data) {
 				if (err)
 					throw err;
 				$scope.updateDevices(data);
 			}
-		})
-	}
-
-	$scope.switchSingleClick = function (switchId) {
-		$scope.launchAjaxRequest({
-			method: 'POST',
-			url: '/device/switch/' + switchId + '/singleClick',
-			callback: function (err, data) {
-				if (err)
-					throw err;
-				$scope.updateDevices(data);
-			}
-		})
-	}
-
-	$scope.switchDoubleClick = function (switchId) {
-		$scope.launchAjaxRequest({
-			method: 'POST',
-			url: '/device/switch/' + switchId + '/doubleClick',
-			callback: function (err, data) {
-				if (err)
-					throw err;
-				$scope.updateDevices(data);
-			}
-		})
+		});
 	}
 });

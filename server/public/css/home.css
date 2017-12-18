@@ -25,3 +25,47 @@ div.device_light_off {
 	height: 32px;
 	cursor: pointer;
 }
+
+div.device_shutter {
+	display:inline-block;
+	width: 128px;
+	height: 128px;
+}
+
+div.device_shutter.position_0 {
+	background: url(/images/shutter_0_128.png);
+}
+div.device_shutter.position_10 {
+	background: url(/images/shutter_10_128.png);
+}
+div.device_shutter.position_20 {
+	background: url(/images/shutter_20_128.png);
+}
+div.device_shutter.position_30 {
+	background: url(/images/shutter_30_128.png);
+}
+div.device_shutter.position_40 {
+	background: url(/images/shutter_40_128.png);
+}
+div.device_shutter.position_50 {
+	background: url(/images/shutter_50_128.png);
+}
+div.device_shutter.position_60 {
+	background: url(/images/shutter_60_128.png);
+}
+div.device_shutter.position_70 {
+	background: url(/images/shutter_70_128.png);
+}
+div.device_shutter.position_80 {
+	background: url(/images/shutter_80_128.png);
+}
+div.device_shutter.position_90 {
+	background: url(/images/shutter_90_128.png);
+}
+div.device_shutter.position_100 {
+	background: url(/images/shutter_100_128.png);
+}
+
+div.shutter_buttons {
+	width:128px;
+}

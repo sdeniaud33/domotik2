@@ -1,0 +1,3 @@
+[submodule "server/libs/serialport"]
+	path = server/libs/serialport
+	url = https://github.com/EmergingTechnologyAdvisors/node-serialport.git

@@ -1,12 +1,15 @@
-import { AbstractDevice, DeviceTypeEnum } from './abstractDevice';
+import { AbstractDevice, DeviceCategoryEnum } from './abstractDevice';
 import * as dbgModule from 'debug';
-import { LightDevice } from './lightDevice';
-import { SwitchDevice } from './switchDevice';
-import { TempSensorDevice } from './tempSensorDevice';
-import { Room } from '../rooms/Room';
-import { RoomManager } from '../rooms/roomManager';
+import { DeviceLocation } from '../locations/deviceLocation';
+import { LocationManager } from '../locations/locationManager';
+import * as mongodb from 'mongodb';	
 
 import * as fs from 'fs';
+import { MySensorsLightDevice } from '../mySensors/mySensorsLightDevice';
+import { MySensorsPushButtonDevice } from '../mySensors/mySensorsPushButtonDevice';
+import { MySensorsTempSensorDevice } from '../mySensors/mySensorsTempSensorDevice';
+import { MySensorsRollingShutterDevice } from '../mySensors/mySensorsRollingShutterDevice';
+import { DeviceTypeEnum } from '../mySensors/mySensorsEnums';
 
 const debug = dbgModule('domotik:deviceManager');
 
@@ -20,35 +23,50 @@ class DeviceManager {
 
 	devicesById = {} as IDevicesMap;
 	private _devices = [] as AbstractDevice[];
+	private mongoDb: mongodb.Db;
 
 	constructor() {
 		if (DeviceManager._instance)
 			throw new Error("Singleton violation : DeviceManager");
 		debug('Ready');
+		var _this = this;
+		mongodb.MongoClient.connect("mongodb://localhost:27017", function (err: any, client: mongodb.Db) {
+			_this.mongoDb = client.db('domotik');
+			console.log("Connected");
+			_this.loadConfigurationFile();
+		});
 	}
 
 	public static getInstance(): DeviceManager {
 		if (!DeviceManager._instance) {
 			DeviceManager._instance = new DeviceManager();
-			DeviceManager._instance.loadConfigurationFile();
 		}
 		return DeviceManager._instance;
 	}
 
-	private registerDevice(device: AbstractDevice): void {
+	public registerDevice(device: AbstractDevice): AbstractDevice {
 		if (this.devicesById[device.id])
 			throw new Error("Duplicate device : " + device.id);
 		this.devicesById[device.id] = device;
 		this._devices.push(device);
 		debug('Registered device ' + device);
+		// var cln = this.mongoDb.collection('devices');
+		// cln.insertMany([device], function (err:any, result:any) {
+			
+		// });
+		return device;
 	}
 
-	getDevice(id: string, deviceTypeToCheck?: DeviceTypeEnum): AbstractDevice {
+	hasDevice(id: string) {
+		return this.devicesById[id] !== undefined;
+	}
+
+	getDevice(id: string, deviceCategoryToCheck?: DeviceCategoryEnum): AbstractDevice {
 		var device = this.devicesById[id];
 		if (!device)
 			throw new Error("Unknown device : " + id);
-		if (deviceTypeToCheck && device.type != deviceTypeToCheck)
-			throw new Error("Invalid device : " + device.id + " was expected to be " + deviceTypeToCheck + ", but was " + device.type);
+		if (deviceCategoryToCheck && device.category != deviceCategoryToCheck)
+			throw new Error("Invalid device : " + device.id + " was expected to be " + deviceCategoryToCheck + ", but was " + device.category);
 		return device;
 	}
 
@@ -56,16 +74,16 @@ class DeviceManager {
 		return this.devicesById;
 	}
 
-	getDevices(typeFilter?: DeviceTypeEnum, idFilter?: string): AbstractDevice[] {
-		if (!typeFilter && !idFilter)
+	getDevices(categoryFilter?: DeviceCategoryEnum, idFilter?: string): AbstractDevice[] {
+		if (!categoryFilter && !idFilter)
 			return this._devices;
 		
 		if (typeof (idFilter) === 'string') {
-			return [this.getDevice(idFilter, typeFilter)];
+			return [this.getDevice(idFilter, categoryFilter)];
 		}
 		
 		return this._devices.filter((device) => {
-			if (typeFilter && device.type !== typeFilter)
+			if (categoryFilter && device.category !== categoryFilter)
 				return false;
 			if (idFilter && (idFilter !== '*') && (device.id !== idFilter)) {
 				return false;
@@ -74,40 +92,39 @@ class DeviceManager {
 		});
 	}
 
-	private createDevice(deviceType: string, deviceId: string): AbstractDevice {
+	private createDevice(mongoDoc:any): AbstractDevice {
 		let device;
-		switch (deviceType) {
+		switch (mongoDoc.category) {
 			case 'light':
-				device = new LightDevice(deviceId);
+				device = new MySensorsLightDevice(mongoDoc.node, mongoDoc.sensor);
 				break;
 			case 'switch':
-				device = new SwitchDevice(deviceId);
+				device = new MySensorsPushButtonDevice(mongoDoc.node, mongoDoc.sensor);
 				break;
 			case 'tempSensor':
-				device = new TempSensorDevice(deviceId);
+				device = new MySensorsTempSensorDevice(mongoDoc.node, mongoDoc.sensor);
+				break;
+			case 'shutter':
+				device = new MySensorsRollingShutterDevice(mongoDoc.node, mongoDoc.sensor);
 				break;
 			default:
-				throw new Error("Invalid device type : " + deviceType);
+				throw new Error("Invalid device type : " + mongoDoc.category);
 		}
+		device.parseMongoDocument(mongoDoc);
 		return device;
 	}
 
 	private loadConfigurationFile(): void {
-		var definitions = JSON.parse(fs.readFileSync('./config/devices.json', 'utf8'));
-		// load devices
-		definitions.devices.forEach((deviceDef: any) => {
-			var device = this.createDevice(deviceDef.type, deviceDef.id);
-			device.label = deviceDef.label;
-			if (!deviceDef.roomId)
-				throw new Error("Device " + deviceDef.id + " has no room");
-			device.room = RoomManager.getInstance().getRoom(deviceDef.roomId);
-			device.loadConfigurationNode(deviceDef);
-			this.registerDevice(device);
+		var t: DeviceTypeEnum;
+		var cln = this.mongoDb.collection('devices');
+		var _this = this;
+		cln.find({}).toArray(function (err: any, data: any) {
+			data.forEach((mongoDoc:any) => {
+				_this.registerDevice(_this.createDevice(mongoDoc));
+			});
+			console.log(">>>>", require("util").inspect(_this._devices, false, null));
 		});
 
-		this._devices.forEach((device) => {
-			device.postConfiguration();
-		});
 	}
 
 }

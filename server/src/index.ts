@@ -1,9 +1,13 @@
-import { Controller } from './core/controller';
+import { GatewayController } from './core/mySensors/gatewayController';
 
 import WebServer from './web/webserver';
+import { DeviceManager } from './core/devices/deviceManager';
+import { LocationManager } from './core/locations/locationManager';
 
-var controller = Controller.getInstance();
+var webServer = new WebServer();
 
-var webServer = new WebServer(controller);
+LocationManager.getInstance();
+DeviceManager.getInstance();
+GatewayController.getInstance();
 
 console.log("Started ...");

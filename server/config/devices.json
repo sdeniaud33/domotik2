@@ -1,6 +1,10 @@
 {
 	"rooms": [
 		{
+			"id": "mysensors",
+			"label": "MySensors"
+		},
+		{
 			"id": "ethan",
 			"label": "Chambre Ethan"
 		},

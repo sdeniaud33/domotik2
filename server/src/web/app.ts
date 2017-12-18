@@ -4,10 +4,10 @@ import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as exphbs from 'express-handlebars';
 import { DeviceManager } from '../core/devices/deviceManager';
-import { RoomManager } from '../core/rooms/roomManager';
 import { AbstractDevice } from '../core/devices/abstractDevice';
-import { LightDevice } from '../core/devices/lightDevice';
-import { SwitchDevice } from '../core/devices/switchDevice';
+import { LocationManager } from '../core/locations/locationManager';
+import { MySensorsLightDevice } from '../core/mySensors/mySensorsLightDevice';
+import { MySensorsPushButtonDevice } from '../core/mySensors/mySensorsPushButtonDevice';
 
 // Creates and configures an ExpressJS web server.
 class App {
@@ -44,45 +44,27 @@ class App {
 	// Configure API endpoints.
 	private routes(): void {
 		this.express.get('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+			var devicesToRender = DeviceManager.getInstance().getDevices().reduce((obj:any, device) => {
+				obj[device.id] = device.getObjectToExposeViaRest();
+				return obj;
+			}, {});
 			res.render('home', {
-				devices: JSON.stringify(DeviceManager.getInstance().getDevicesAsMap()),
-				rooms: JSON.stringify(RoomManager.getInstance().getRoomsAsMap()),
+				devices: JSON.stringify(devicesToRender),
+				locations: JSON.stringify(LocationManager.getInstance().getLocationsAsMap()),
 			});
 		});
 		this.express.get('/devices', (req: express.Request, res: express.Response) => {
-			res.json({ devices: DeviceManager.getInstance().getDevices() });
-		});
-		this.express.post('/device/light/:lightId/switch', (req: express.Request, res: express.Response) => {
-			var device = DeviceManager.getInstance().getDevice(req.params.lightId, 'light');
-			if (device === undefined) {
-				res.status(404);
-				return;
-			}
-			var light = device as LightDevice;
-			light.switch();
 			res.json({
-				devices: [device]
+				devices: DeviceManager.getInstance().getDevices().map(
+					device => {
+						return device.getObjectToExposeViaRest();
+					}),
 			});
 		});
-		this.express.post('/device/switch/:switchId/singleClick', (req: express.Request, res: express.Response) => {
-			var device = DeviceManager.getInstance().getDevice(req.params.switchId, 'switch');
-			if (device === undefined) {
-				res.status(404);
-				return;
-			}
-			var sw = device as SwitchDevice;
-			var result = sw.emitSingleClick();
-			res.json({ devices: result });
-		});
-		this.express.post('/device/switch/:switchId/doubleClick', (req: express.Request, res: express.Response) => {
-			var device = DeviceManager.getInstance().getDevice(req.params.switchId, 'switch');
-			if (device === undefined) {
-				res.status(404);
-				return;
-			}
-			var sw = device as SwitchDevice;
-			var result = sw.emitDoubleClick();
-			res.json({ devices: result });
+		this.express.post('/device/command/:deviceId/:command', (req: express.Request, res: express.Response) => {
+			var device = DeviceManager.getInstance().getDevice(req.params.deviceId);
+			device.runCommand(req.params.command);
+			res.json({ devices: [] });
 		});
 		this.express.get('/device/:deviceId/status', (req: express.Request, res: express.Response) => {
 			var device = DeviceManager.getInstance().getDevice(req.params.deviceId);
@@ -92,12 +74,8 @@ class App {
 			}
 			console.log(">>>> DEVICE : ", device);
 			var result: any = {
-				device: device,
+				device: device.getObjectToExposeViaRest(),
 			};
-			if (device.hasOwnProperty('getStatus')) {
-				console.log('>>>> . getStatus');
-				result.status = (<LightDevice>device).getStatus();
-			}
 			res.json(result);
 		});
 	}

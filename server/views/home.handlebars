@@ -1,6 +1,6 @@
 <script>
 	var devices = {{{ devices }}};
-	var rooms = {{{ rooms }}};
+	var locations = {{{ locations }}};
 
 </script>
 
@@ -9,13 +9,16 @@
 <script type="text/javascript" src="/js/home.ctrl.js"></script>
 
 <script type="text/ng-template" id="/deviceLight.html">
-	<div ng-class="device.status == 'on' ? 'device_light_on' : 'device_light_off'" ng-click="lightSwitch(device.id)" title="{[{device.id}]}">
+	<div ng-class="device.status == 'on' ? 'device_light_on' : 'device_light_off'" ng-click="emitCommand(device.id, 'switch')" title="{[{device.id}]}">
 	</div>
 	<span>{[{device.label}]}</span>
 </script>
 
 <script type="text/ng-template" id="/deviceSwitch.html">
-	<div class="device_switch" title="{[{device.id}]}" ng-click="switchSingleClick(device.id);" ng-dblclick="switchDoubleClick(device.id);">
+	<div class="device_switch" 
+			title="{[{device.description || device.id}]}" 
+			ng-click="emitCommand(device.id, 'singleClick');" 
+			ng-dblclick="switchDoubleClick(device.id);">
 	</div>
 	<span>{[{device.label}]}</span>
 </script>
@@ -26,22 +29,54 @@
 	<span>{[{device.label}]} : {[{device.temperature}]} °C</span>
 </script>
 
+<script type="text/ng-template" id="/deviceShutter.html">
+	<div class="device_shutter position_{[{device.positionBy10}]}" title="{[{device.id}]}">
+	</div>
+	<div class="shutter_buttons" align="center">
+		<button class="btn btn-default btn-xs" 
+				title="Up" 
+				ng-click="emitCommand(device.id, 'up');">
+			<span class="glyphicon glyphicon-triangle-top"></span>
+		</button>
+		<button class="btn btn-default btn-xs" 
+				title="Stop" 
+				ng-click="emitCommand(device.id, 'stop');">
+			<span class="glyphicon glyphicon-stop"></span>
+		</button>
+		<button class="btn btn-default btn-xs" 
+				title="Down" 
+				ng-click="emitCommand(device.id, 'down');">
+			<span class="glyphicon glyphicon-triangle-bottom"></span>
+		</button>
+		<button class="btn btn-default btn-xs" 
+				title="Push button" 
+				ng-click="emitCommand(device.id, 'push_btn')">
+			<span class="glyphicon glyphicon-eject"></span>
+		</button>		
+	</div>
+</script>
+
 <div class="row">
-	<div ng-repeat="room in rooms track by $index">
+	<div ng-repeat="location in locations track by $index">
 		<div class="col-sm-4 col-md-3 col-xs-6">
 			<div class="thumbnail">
 				<div>
-					<h4>{[{room.label}]}</h4>
+					<h4>{[{location.label}]}</h4>
 					<div ng-repeat="device in devices track by $index">
-						<div ng-show="device.room.id == room.id && device.type=='light'">
-							<span ng-include src="'/deviceLight.html'"></span>
-						</div>
-						<div ng-show="device.room.id == room.id && device.type=='switch'">
-							<span ng-include src="'/deviceSwitch.html'"></span>
-						</div>
-						<div ng-show="device.room.id == room.id && device.type=='tempSensor'">
-							<span ng-include src="'/deviceTempSensor.html'"></span>
-						</div>
+						<span ng-show="device.location == location.id">
+							<div ng-show="device.category=='light'">
+								<span ng-include src="'/deviceLight.html'"></span>
+							</div>
+							<div ng-show="device.category=='switch'">
+								<span ng-include src="'/deviceSwitch.html'"></span>
+							</div>
+							<div ng-show="device.category=='tempSensor'">
+								<span ng-include src="'/deviceTempSensor.html'"></span>
+							</div>
+							<div ng-show="device.category=='shutter'">
+								<span ng-include src="'/deviceShutter.html'"></span>
+							</div>
+						</span>
 					</div>
 				</div>
 			</div>
